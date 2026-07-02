@@ -62,6 +62,13 @@
         }
 
         .smooth-transition { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Animasi Bintang Memantul (Gold Star) */
+        @keyframes starBounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+        }
+        .star-bounce { animation: starBounce 1.2s infinite ease-in-out; }
     </style>
 </head>
 
@@ -525,6 +532,53 @@
             });
         }
 
+        // Plugin Kustom Chart.js untuk menampilkan Bintang Emas 
+        const starBouncerPlugin = {
+            id: 'starBouncer',
+            afterDraw: (chart) => {
+                // Buat container untuk bintang jika belum ada
+                let overlay = chart.canvas.parentNode.querySelector('.star-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.className = 'star-overlay absolute inset-0 pointer-events-none z-10 overflow-visible';
+                    chart.canvas.parentNode.appendChild(overlay);
+                }
+
+                const meta = chart.getDatasetMeta(0);
+                const data = chart.data.datasets[0].data;
+
+                // Loop setiap data untuk menaruh bintang
+                data.forEach((value, index) => {
+                    const bar = meta.data[index];
+                    let star = overlay.querySelector(`[data-index="${index}"]`);
+
+                    // Jika nilai >= 10, tampilkan/update posisi bintang
+                    if (value >= 10 && bar && !bar.hidden) {
+                        if (!star) {
+                            star = document.createElement('i');
+                            // Bintang kuning berkilau dengan efek memantul kustom
+                            star.className = 'fa-solid fa-star text-yellow-400 absolute star-bounce drop-shadow-[0_3px_5px_rgba(250,204,21,0.6)] z-20';
+                            star.style.fontSize = '22px';
+                            star.dataset.index = index;
+                            overlay.appendChild(star);
+                        }
+                        // Update posisinya secara dinamis tepat di atas tengah grafik
+                        star.style.left = `${bar.x}px`;
+                        star.style.top = `${bar.y - 30}px`; 
+                    } else if (star) {
+                        // Hapus bintang jika nilainya turun di bawah 10
+                        star.remove();
+                    }
+                });
+                
+                // Bersihkan sisa elemen bintang jika array data menyusut
+                const allStars = overlay.querySelectorAll('i');
+                allStars.forEach(star => {
+                    if (star.dataset.index >= data.length) star.remove();
+                });
+            }
+        };
+
         function createOrUpdateChart(instance, canvasId, labels, dataPoints, backgroundColors) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             if (instance) instance.destroy();
@@ -543,12 +597,16 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
+                    layout: {
+                        padding: { top: 35 } // Tambah jarak atas agar bintang tidak terpotong kontainer
+                    },
                     scales: {
                         y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: '#f1f5f9', borderDash: [5, 5] } },
                         x: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
                     },
                     plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', padding: 14, cornerRadius: 10, titleFont: { size: 14 }, bodyFont: { size: 13, weight: 'bold' } } }
-                }
+                },
+                plugins: [starBouncerPlugin] // Sisipkan plugin pemantul bintang
             });
         }
 
@@ -563,22 +621,29 @@
                 }
             });
 
-            // Urutkan petugas berdasarkan total (Terbanyak di kiri)
-            const orderedPetugas = [...sortedPetugas].sort((a, b) => totalCount[b] - totalCount[a]);
-            const bgColors = orderedPetugas.map((_, i) => chartColors[i % chartColors.length]);
+            // 1. Urutkan berdasarkan Ranking Total (Untuk membuat mapping warna konsisten)
+            const rankTotalPetugas = [...sortedPetugas].sort((a, b) => totalCount[b] - totalCount[a]);
+            const colorMap = {};
+            rankTotalPetugas.forEach((p, i) => { colorMap[p] = chartColors[i % chartColors.length]; });
+
+            // 2. Data Chart Total (Diurutkan berdasarkan Total)
+            const dataTotal = rankTotalPetugas.map(p => totalCount[p]);
+            const colorsTotal = rankTotalPetugas.map(p => colorMap[p]);
             
-            // Filter hanya yang punya entry (angka > 0)
-            const petugasUmum = orderedPetugas.filter(p => umumCount[p] > 0);
-            const dataUmum = petugasUmum.map(p => umumCount[p]);
-            const colorsUmum = petugasUmum.map(p => bgColors[orderedPetugas.indexOf(p)]);
+            // 3. Data Chart UMUM (Diurutkan secara independen berdasarkan CKG UMUM)
+            const petugasUmumSorted = [...sortedPetugas].filter(p => umumCount[p] > 0).sort((a,b) => umumCount[b] - umumCount[a]);
+            const dataUmum = petugasUmumSorted.map(p => umumCount[p]);
+            const colorsUmum = petugasUmumSorted.map(p => colorMap[p]);
 
-            const petugasSekolah = orderedPetugas.filter(p => sekolahCount[p] > 0);
-            const dataSekolah = petugasSekolah.map(p => sekolahCount[p]);
-            const colorsSekolah = petugasSekolah.map(p => bgColors[orderedPetugas.indexOf(p)]);
+            // 4. Data Chart SEKOLAH (Diurutkan secara independen berdasarkan CKG SEKOLAH)
+            const petugasSekolahSorted = [...sortedPetugas].filter(p => sekolahCount[p] > 0).sort((a,b) => sekolahCount[b] - sekolahCount[a]);
+            const dataSekolah = petugasSekolahSorted.map(p => sekolahCount[p]);
+            const colorsSekolah = petugasSekolahSorted.map(p => colorMap[p]);
 
-            petugasChartInstance = createOrUpdateChart(petugasChartInstance, 'petugasChart', orderedPetugas, orderedPetugas.map(p => totalCount[p]), bgColors);
-            umumChartInstance = createOrUpdateChart(umumChartInstance, 'umumChart', petugasUmum, dataUmum, colorsUmum);
-            sekolahChartInstance = createOrUpdateChart(sekolahChartInstance, 'sekolahChart', petugasSekolah, dataSekolah, colorsSekolah);
+            // Update ke-3 Chart secara terpisah dengan datanya masing-masing
+            petugasChartInstance = createOrUpdateChart(petugasChartInstance, 'petugasChart', rankTotalPetugas, dataTotal, colorsTotal);
+            umumChartInstance = createOrUpdateChart(umumChartInstance, 'umumChart', petugasUmumSorted, dataUmum, colorsUmum);
+            sekolahChartInstance = createOrUpdateChart(sekolahChartInstance, 'sekolahChart', petugasSekolahSorted, dataSekolah, colorsSekolah);
         }
 
         function downloadExcel() {
@@ -626,6 +691,22 @@
             };
 
             if(dataEntry.nik.length !== 16) { showToast('Format NIK Salah! Wajib 16 digit.', 'error'); return; }
+
+            // ===== CEK DUPLIKASI DATA DI SISI APLIKASI =====
+            // Pengecekan NIK
+            const isDuplicateNIK = globalData.some(row => row.nik === dataEntry.nik);
+            if (isDuplicateNIK) {
+                showToast('Gagal: NIK tersebut sudah di input sebelumnya!', 'error');
+                return; // Hentikan eksekusi, jangan kirim ke server
+            }
+
+            // Pengecekan Etiket (pastikan form etiket tidak kosong sebelum di cek)
+            const isDuplicateEtiket = dataEntry.etiket !== "" && globalData.some(row => row.etiket === dataEntry.etiket);
+            if (isDuplicateEtiket) {
+                showToast('Gagal: Data Etiket tersebut sudah di input sebelumnya!', 'error');
+                return; // Hentikan eksekusi
+            }
+            // ===============================================
 
             const originalBtnText = btnSubmit.innerHTML;
             btnSubmit.innerHTML = `<i class="fa-solid fa-leaf fa-bounce"></i> Mengirim Data...`;
