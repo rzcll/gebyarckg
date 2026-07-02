@@ -361,7 +361,18 @@
             'rgba(139, 92, 246, 0.85)'
         ];
 
-        document.addEventListener('DOMContentLoaded', () => { loadData(); });
+        document.addEventListener('DOMContentLoaded', () => { 
+            loadData(); 
+            
+            // Auto Refresh setiap 15 detik secara senyap di background
+            setInterval(() => {
+                // Hanya memanggil refresh jika pengguna sedang berada di tab Dashboard
+                const viewDashboard = document.getElementById('view-dashboard');
+                if(!viewDashboard.classList.contains('hidden')) {
+                    loadData(true); 
+                }
+            }, 15000);
+        });
 
         function switchTab(tabId) {
             const btnDashboard = document.getElementById('tab-dashboard');
@@ -433,8 +444,9 @@
             else { hideDropdown(); }
         }
 
-        async function loadData() {
-            renderLoading();
+        // Tambahkan parameter silent untuk refresh otomatis tanpa animasi loading penuh
+        async function loadData(silent = false) {
+            if (!silent) renderLoading();
             if (!GAS_API_URL) {
                 setTimeout(() => { renderTable(globalData); }, 800);
                 return;
@@ -448,11 +460,10 @@
                     globalData = result.data;
                     renderTable(globalData);
                 } else {
-                    showToast('Gagal membaca data', 'error'); renderEmptyTable();
+                    if (!silent) { showToast('Gagal membaca data', 'error'); renderEmptyTable(); }
                 }
             } catch (error) {
-                showToast('Koneksi terputus. Pastikan URL API benar.', 'error');
-                renderEmptyTable();
+                if (!silent) { showToast('Koneksi terputus. Pastikan URL API benar.', 'error'); renderEmptyTable(); }
             }
         }
 
@@ -490,7 +501,15 @@
             tbody.innerHTML = '';
             dataArray.forEach((row, index) => {
                 const tr = document.createElement('tr');
-                tr.className = `border-b border-slate-50 hover:bg-slate-50/80 transition-colors bg-white`;
+                
+                const isSekolah = row.jenis === 'CKG SEKOLAH';
+                
+                // Menentukan warna background baris berdasarkan Jenis Entry
+                const rowStyle = isSekolah 
+                    ? 'bg-orange-50/50 hover:bg-orange-100/80 border-orange-100' // Background Oranye untuk SEKOLAH
+                    : 'bg-indigo-50/40 hover:bg-indigo-100/60 border-indigo-100'; // Background Biru/Indigo untuk UMUM
+                
+                tr.className = `border-b transition-colors ${rowStyle}`;
                 
                 // Format waktu untuk hanya menampilkan Tanggal/Bulan/Tahun dan Jam
                 let displayWaktu = row.waktu;
@@ -509,7 +528,6 @@
                     }
                 } catch(e) {}
 
-                const isSekolah = row.jenis === 'CKG SEKOLAH';
                 const badgeClass = isSekolah ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200';
                 const badgeIcon = isSekolah ? 'fa-building-columns' : 'fa-notes-medical';
 
