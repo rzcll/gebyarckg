@@ -266,18 +266,18 @@
                         <label class="block text-sm font-bold text-slate-700 mb-3">Jenis Entry <span class="text-red-500">*</span></label>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <label class="relative flex items-center p-5 rounded-2xl cursor-pointer input-cekungan hover:!bg-orange-50 [&:has(input:checked)]:!bg-orange-500 [&:has(input:checked)]:!border-orange-500 [&:has(input:checked)]:!shadow-[0_10px_25px_-5px_rgba(249,115,22,0.4)] [&:has(input:checked)]:-translate-y-1 group smooth-transition">
-                                <input type="radio" name="jenis" value="CKG UMUM" required class="peer sr-only">
+                                <input type="radio" name="jenis" value="CKG UMUM" required class="sr-only">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-6 h-6 rounded-full border-[3px] border-slate-300 peer-checked:border-white peer-checked:bg-orange-500 smooth-transition shadow-sm"></div>
-                                    <span class="font-extrabold text-slate-500 peer-checked:text-white text-base md:text-lg smooth-transition">CKG UMUM</span>
+                                    <div class="w-6 h-6 rounded-full border-[3px] border-slate-300 group-has-[:checked]:border-white group-has-[:checked]:bg-orange-500 smooth-transition shadow-sm"></div>
+                                    <span class="font-extrabold text-slate-500 group-has-[:checked]:text-white text-base md:text-lg smooth-transition">CKG UMUM</span>
                                 </div>
                             </label>
                             
                             <label class="relative flex items-center p-5 rounded-2xl cursor-pointer input-cekungan hover:!bg-orange-50 [&:has(input:checked)]:!bg-orange-500 [&:has(input:checked)]:!border-orange-500 [&:has(input:checked)]:!shadow-[0_10px_25px_-5px_rgba(249,115,22,0.4)] [&:has(input:checked)]:-translate-y-1 group smooth-transition">
-                                <input type="radio" name="jenis" value="CKG SEKOLAH" required class="peer sr-only">
+                                <input type="radio" name="jenis" value="CKG SEKOLAH" required class="sr-only">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-6 h-6 rounded-full border-[3px] border-slate-300 peer-checked:border-white peer-checked:bg-orange-500 smooth-transition shadow-sm"></div>
-                                    <span class="font-extrabold text-slate-500 peer-checked:text-white text-base md:text-lg smooth-transition">CKG SEKOLAH</span>
+                                    <div class="w-6 h-6 rounded-full border-[3px] border-slate-300 group-has-[:checked]:border-white group-has-[:checked]:bg-orange-500 smooth-transition shadow-sm"></div>
+                                    <span class="font-extrabold text-slate-500 group-has-[:checked]:text-white text-base md:text-lg smooth-transition">CKG SEKOLAH</span>
                                 </div>
                             </label>
                         </div>
@@ -485,12 +485,29 @@
                 const tr = document.createElement('tr');
                 tr.className = `border-b border-slate-50 hover:bg-slate-50/80 transition-colors bg-white`;
                 
+                // Format waktu untuk hanya menampilkan Tanggal/Bulan/Tahun dan Jam
+                let displayWaktu = row.waktu;
+                try {
+                    if (displayWaktu && (displayWaktu.includes("GMT") || displayWaktu.match(/[a-zA-Z]/))) {
+                        const d = new Date(displayWaktu);
+                        if (!isNaN(d.getTime())) {
+                            const dd = String(d.getDate()).padStart(2, '0');
+                            const mm = String(d.getMonth() + 1).padStart(2, '0');
+                            const yyyy = d.getFullYear();
+                            const hh = String(d.getHours()).padStart(2, '0');
+                            const min = String(d.getMinutes()).padStart(2, '0');
+                            const ss = String(d.getSeconds()).padStart(2, '0');
+                            displayWaktu = `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`;
+                        }
+                    }
+                } catch(e) {}
+
                 const isSekolah = row.jenis === 'CKG SEKOLAH';
                 const badgeClass = isSekolah ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200';
                 const badgeIcon = isSekolah ? 'fa-building-columns' : 'fa-notes-medical';
 
                 tr.innerHTML = `
-                    <td class="px-6 py-4 text-slate-500 text-sm whitespace-nowrap"><i class="fa-regular fa-clock opacity-50 mr-1"></i> ${row.waktu}</td>
+                    <td class="px-6 py-4 text-slate-500 text-sm whitespace-nowrap"><i class="fa-regular fa-clock opacity-50 mr-1"></i> ${displayWaktu}</td>
                     <td class="px-6 py-4 font-extrabold text-slate-700">${row.petugas}</td>
                     <td class="px-6 py-4 font-extrabold text-teal-700">${row.nama}</td>
                     <td class="px-6 py-4 text-slate-500 font-mono text-sm">${row.nik}</td>
@@ -618,7 +635,18 @@
             if (!GAS_API_URL) {
                 setTimeout(() => {
                     resetFormState(btnSubmit, originalBtnText);
-                    dataEntry.waktu = new Date().toLocaleString('id-ID');
+                    
+                    // Format waktu ke dd/mm/yyyy hh:mm:ss untuk mode preview
+                    const now = new Date();
+                    const dd = String(now.getDate()).padStart(2, '0');
+                    const mm = String(now.getMonth() + 1).padStart(2, '0');
+                    const yyyy = now.getFullYear();
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const min = String(now.getMinutes()).padStart(2, '0');
+                    const ss = String(now.getSeconds()).padStart(2, '0');
+                    
+                    dataEntry.waktu = `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`;
+                    
                     globalData.unshift(dataEntry); 
                     showToast('Sukses (Mode Preview)', 'success');
                     form.reset();
