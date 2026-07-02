@@ -572,17 +572,26 @@
 
                     // Jika nilai >= 10, tampilkan/update posisi bintang
                     if (value >= 10 && bar && !bar.hidden) {
+                        // Menghitung ukuran dinamis: Bintang berukuran 65% dari lebar batang grafik
+                        // Dibatasi minimum 14px agar tetap terlihat, dan maksimum 40px agar tidak terlalu raksasa
+                        const barWidth = bar.width || 30;
+                        const starSize = Math.max(14, Math.min(barWidth * 0.65, 40));
+
                         if (!star) {
                             star = document.createElement('i');
                             // Bintang kuning berkilau dengan efek memantul kustom
                             star.className = 'fa-solid fa-star text-yellow-400 absolute star-bounce drop-shadow-[0_3px_5px_rgba(250,204,21,0.6)] z-20';
-                            star.style.fontSize = '22px';
                             star.dataset.index = index;
                             overlay.appendChild(star);
                         }
+                        
+                        // Terapkan ukuran dinamis (di-update setiap kali resize)
+                        star.style.fontSize = `${starSize}px`;
+                        
                         // Update posisinya secara dinamis tepat di atas tengah grafik
+                        // Jarak atas (top) disesuaikan otomatis dengan ukuran bintang
                         star.style.left = `${bar.x}px`;
-                        star.style.top = `${bar.y - 30}px`; 
+                        star.style.top = `${bar.y - starSize - 12}px`; 
                     } else if (star) {
                         // Hapus bintang jika nilainya turun di bawah 10
                         star.remove();
