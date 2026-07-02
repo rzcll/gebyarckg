@@ -94,16 +94,16 @@
         
         <div class="flex justify-center mb-10 md:mb-12 relative z-10 w-full">
             <div class="flex flex-col sm:flex-row bg-white p-2 rounded-3xl shadow-xl border border-slate-200/80 w-full sm:w-auto gap-3">
-                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-4 px-6 md:px-14 rounded-2xl text-base md:text-lg font-extrabold smooth-transition bg-teal-600 text-white shadow-[0_8px_20px_-6px_rgba(13,148,136,0.6)] flex items-center justify-center gap-3 border border-transparent active:scale-[0.97]">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-4 px-6 md:px-14 rounded-2xl text-base md:text-lg font-extrabold smooth-transition text-slate-500 bg-transparent hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center gap-3 border border-transparent active:scale-[0.97]">
                     <i class="fa-solid fa-chart-pie text-xl"></i> Dashboard Statistik
                 </button>
-                <button onclick="switchTab('form')" id="tab-form" class="py-4 px-6 md:px-14 rounded-2xl text-base md:text-lg font-extrabold smooth-transition text-slate-500 bg-transparent hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center gap-3 border border-transparent active:scale-[0.97]">
+                <button onclick="switchTab('form')" id="tab-form" class="py-4 px-6 md:px-14 rounded-2xl text-base md:text-lg font-extrabold smooth-transition bg-teal-600 text-white shadow-[0_8px_20px_-6px_rgba(13,148,136,0.6)] flex items-center justify-center gap-3 border border-transparent active:scale-[0.97]">
                     <i class="fa-solid fa-pen-nib text-xl"></i> Entry Data Baru
                 </button>
             </div>
         </div>
 
-        <div id="view-dashboard" class="space-y-8 animate-[fadeIn_0.3s_ease-out] w-full">
+        <div id="view-dashboard" class="hidden space-y-8 animate-[fadeIn_0.3s_ease-out] w-full">
             
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                 <!-- Card Total -->
@@ -232,7 +232,7 @@
             </div>
         </div>
 
-        <div id="view-form" class="hidden animate-[fadeIn_0.3s_ease-out] w-full">
+        <div id="view-form" class="animate-[fadeIn_0.3s_ease-out] w-full">
             <div class="max-w-4xl mx-auto floating-card overflow-hidden">
                 <div class="bg-gradient-fresh px-8 py-10 flex items-center gap-5 relative overflow-hidden">
                     <div class="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
@@ -362,7 +362,7 @@
         ];
 
         document.addEventListener('DOMContentLoaded', () => { 
-            loadData(); 
+            loadData(true); 
             
             // Auto Refresh setiap 15 detik secara senyap di background
             setInterval(() => {
