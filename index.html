@@ -220,6 +220,30 @@
                     <canvas id="petugasChart"></canvas>
                 </div>
             </div>
+            
+            <!-- GRAFIK 4: HARIAN PETUGAS -->
+            <div class="floating-card p-6 w-full">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-slate-100 pb-4 gap-4">
+                    <h3 class="text-lg font-extrabold text-slate-700 flex items-center gap-3">
+                        <span class="bg-cyan-50 text-cyan-600 p-2 rounded-xl"><i class="fa-solid fa-user-clock"></i></span>
+                        Capaian Harian per Petugas
+                    </h3>
+                    
+                    <!-- Navigasi Tanggal Harian Petugas -->
+                    <div class="flex items-center bg-slate-100 p-1.5 rounded-xl">
+                        <button onclick="changeDayPetugas(-1)" class="p-2 px-3 text-slate-500 hover:text-cyan-600 hover:bg-white rounded-lg transition-all"><i class="fa-solid fa-chevron-left"></i></button>
+                        <div class="px-4 font-bold text-slate-700 text-sm min-w-[140px] text-center" id="display-date-harian-petugas">Memuat...</div>
+                        <button onclick="changeDayPetugas(1)" class="p-2 px-3 text-slate-500 hover:text-cyan-600 hover:bg-white rounded-lg transition-all"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="w-full h-80 relative">
+                    <!-- Total Entry Badge -->
+                    <div class="absolute top-0 right-2 bg-slate-50 text-slate-600 text-xs sm:text-sm font-extrabold px-3 py-1.5 rounded-lg border border-slate-200 z-10 flex items-center gap-2 shadow-sm">
+                        Total Entry: <span id="total-val-harian-petugas" class="text-cyan-600 text-base">0</span>
+                    </div>
+                    <canvas id="harianPetugasChart"></canvas>
+                </div>
+            </div>
 
             <!-- Tabel Live Data -->
             <div class="floating-card overflow-hidden w-full">
@@ -359,10 +383,12 @@
         let harianChartInstance = null;
         let bulananChartInstance = null;
         let petugasChartInstance = null;
+        let harianPetugasChartInstance = null; // Instance Chart Harian Petugas
 
         // State Tanggal
         let currentHarianDate = new Date();
         let currentBulananDate = new Date();
+        let currentHarianPetugasDate = new Date(); // State Khusus Grafik Harian Petugas
 
         const chartColors = [
             'rgba(16, 185, 129, 0.85)', 'rgba(14, 165, 233, 0.85)', 'rgba(245, 158, 11, 0.85)', 
@@ -591,9 +617,9 @@
                 const data = chart.data.datasets[0].data;
                 const canvasId = chart.canvas.id;
 
-                // Tentukan batas 3 besar untuk grafik petugas
+                // Tentukan batas 3 besar untuk grafik petugas (baik yang total maupun harian)
                 let top3Threshold = -1;
-                if (canvasId === 'petugasChart' && data.length > 0) {
+                if ((canvasId === 'petugasChart' || canvasId === 'harianPetugasChart') && data.length > 0) {
                     const sortedData = [...data].sort((a, b) => b - a);
                     top3Threshold = sortedData[Math.min(2, sortedData.length - 1)];
                 }
@@ -607,11 +633,11 @@
                     if (canvasId === 'harianChart') {
                         showStar = value >= 15;
                     } else if (canvasId === 'bulananChart') {
-                        showStar = value >= 400; // Untuk grafik bulanan, bintang jika 400 keatas
-                    } else if (canvasId === 'petugasChart') {
-                        showStar = (value >= top3Threshold && value > 0); // Untuk petugas, top 3
+                        showStar = value >= 400; 
+                    } else if (canvasId === 'petugasChart' || canvasId === 'harianPetugasChart') {
+                        showStar = (value >= top3Threshold && value > 0); // Untuk petugas, top 3 selalu tampil
                     } else {
-                        showStar = value >= 10; // Default cadangan
+                        showStar = value >= 10; 
                     }
 
                     if (showStar && bar && !bar.hidden) {
@@ -680,11 +706,16 @@
             currentBulananDate.setMonth(currentBulananDate.getMonth() + offset);
             updateBulananChart();
         }
+        function changeDayPetugas(offset) {
+            currentHarianPetugasDate.setDate(currentHarianPetugasDate.getDate() + offset);
+            updateHarianPetugasChart();
+        }
 
         function updateAllCharts() {
             updateHarianChart();
             updateBulananChart();
             renderPetugasChart();
+            updateHarianPetugasChart();
         }
 
         function updateHarianChart() {
@@ -768,6 +799,37 @@
             document.getElementById('total-val-petugas').innerText = totalPetugas;
 
             petugasChartInstance = createOrUpdateChart(petugasChartInstance, 'petugasChart', labels, data, colors);
+        }
+
+        function updateHarianPetugasChart() {
+            const y = currentHarianPetugasDate.getFullYear();
+            const m = currentHarianPetugasDate.getMonth();
+            const d = currentHarianPetugasDate.getDate();
+            
+            document.getElementById('display-date-harian-petugas').innerText = `${d} ${monthNames[m]} ${y}`;
+
+            const petugasCount = {};
+            globalData.forEach(item => {
+                let namaPetugas = (item.petugas || "TANPA NAMA").toUpperCase();
+                const itemDate = parseCustomDate(item.waktu);
+                if (!isNaN(itemDate.getTime()) && itemDate.getFullYear() === y && itemDate.getMonth() === m && itemDate.getDate() === d) {
+                    if(!petugasCount[namaPetugas]) petugasCount[namaPetugas] = 0;
+                    petugasCount[namaPetugas]++;
+                }
+            });
+
+            const sortedPetugas = Object.keys(petugasCount).sort((a,b) => petugasCount[b] - petugasCount[a]);
+            const dataVals = sortedPetugas.map(p => petugasCount[p]);
+            
+            let labels = sortedPetugas.length > 0 ? sortedPetugas : ['TIDAK ADA DATA'];
+            let data = sortedPetugas.length > 0 ? dataVals : [0];
+            let colors = labels.map((l, i) => chartColors[i % chartColors.length]);
+
+            // Update label Total Entry untuk Grafik Harian Petugas
+            const totalHarianPetugas = dataVals.reduce((a, b) => a + b, 0);
+            document.getElementById('total-val-harian-petugas').innerText = totalHarianPetugas;
+
+            harianPetugasChartInstance = createOrUpdateChart(harianPetugasChartInstance, 'harianPetugasChart', labels, data, colors);
         }
 
         // ================= SUBMIT & EXPORT =================
