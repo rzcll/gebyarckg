@@ -369,6 +369,47 @@
 
     <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
 
+    <!-- Global Submit Loading Overlay (Glassmorphism Effect) -->
+    <div id="submit-overlay" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div id="submit-card" class="bg-white/70 backdrop-blur-xl border border-white/50 p-8 md:p-10 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col items-center text-center transform scale-90 transition-all duration-300">
+            <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
+                <!-- Outer Spinning Ring -->
+                <div class="absolute inset-0 border-4 border-slate-200/50 border-t-teal-500 rounded-full animate-spin"></div>
+                <!-- Inner Pulse Icon -->
+                <div class="absolute inset-3 bg-white rounded-full flex items-center justify-center shadow-inner">
+                    <i class="fa-solid fa-paper-plane text-3xl text-teal-500 animate-pulse translate-x-[-2px] translate-y-[2px]"></i>
+                </div>
+            </div>
+            <h3 class="text-xl md:text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Menyimpan Data...</h3>
+            <p class="text-sm font-medium text-slate-600 max-w-[260px] leading-relaxed">Mohon tunggu sebentar, data Anda sedang diamankan ke server.</p>
+        </div>
+    </div>
+
+    <!-- Global Duplicate Error Overlay (Glassmorphism Effect) -->
+    <div id="duplicate-error-overlay" class="fixed inset-0 z-[110] hidden items-center justify-center bg-slate-900/60 backdrop-blur-md opacity-0 transition-opacity duration-300 px-4">
+        <div id="duplicate-error-card" class="bg-white/85 backdrop-blur-2xl border border-red-200/60 p-8 md:p-10 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(220,38,38,0.4)] flex flex-col items-center text-center transform scale-90 transition-all duration-300 max-w-sm w-full relative overflow-hidden">
+            <!-- Dekorasi Latar Belakang Merah -->
+            <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 -ml-8 -mb-8 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="relative w-24 h-24 mb-6 flex items-center justify-center z-10">
+                <!-- Outer Pulse Ring -->
+                <div class="absolute inset-0 border-4 border-red-300 rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] opacity-50"></div>
+                <!-- Inner Icon -->
+                <div class="absolute inset-2 bg-red-100 rounded-full flex items-center justify-center shadow-inner border border-red-200">
+                    <i class="fa-solid fa-triangle-exclamation text-4xl text-red-500 animate-[bounce_2s_infinite]"></i>
+                </div>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-3 tracking-tight z-10">Data Duplikat!</h3>
+            <p class="text-sm font-medium text-slate-600 mb-8 leading-relaxed z-10">
+                Data Etiket <span id="duplicate-etiket-text" class="font-extrabold text-red-600 bg-red-50 px-2 py-0.5 rounded-md border border-red-100 inline-block my-1"></span><br>sudah pernah diinput sebelumnya. Silakan periksa kembali fisik data Anda.
+            </p>
+            <button onclick="hideDuplicateError()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-2xl shadow-[0_8px_20px_-6px_rgba(239,68,68,0.6)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 z-10">
+                <i class="fa-solid fa-xmark"></i> Mengerti, Tutup
+            </button>
+        </div>
+    </div>
+
     <script>
         // =====================================================================
         // PENTING: GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA
@@ -860,6 +901,68 @@
         }
 
         // ================= SUBMIT & EXPORT =================
+        function showSubmitLoading() {
+            const overlay = document.getElementById('submit-overlay');
+            const card = document.getElementById('submit-card');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex'); // Pastikan menggunakan flex untuk centering
+            
+            // Jeda sedikit agar browser me-render display:flex sebelum menjalankan transisi opacity
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                overlay.classList.add('opacity-100');
+                card.classList.remove('scale-90');
+                card.classList.add('scale-100');
+            }, 20);
+        }
+
+        function hideSubmitLoading() {
+            const overlay = document.getElementById('submit-overlay');
+            const card = document.getElementById('submit-card');
+            
+            overlay.classList.remove('opacity-100');
+            overlay.classList.add('opacity-0');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-90');
+            
+            // Tunggu animasi CSS selesai sebelum menyembunyikan elemen sepenuhnya
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }, 300);
+        }
+
+        // --- FUNGSI ANIMASI ERROR DUPLIKAT ---
+        function showDuplicateError(etiketVal) {
+            document.getElementById('duplicate-etiket-text').innerText = `"${etiketVal}"`;
+            const overlay = document.getElementById('duplicate-error-overlay');
+            const card = document.getElementById('duplicate-error-card');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                overlay.classList.add('opacity-100');
+                card.classList.remove('scale-90');
+                card.classList.add('scale-100');
+            }, 20);
+        }
+
+        function hideDuplicateError() {
+            const overlay = document.getElementById('duplicate-error-overlay');
+            const card = document.getElementById('duplicate-error-card');
+            
+            overlay.classList.remove('opacity-100');
+            overlay.classList.add('opacity-0');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-90');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }, 300);
+        }
+
         function downloadExcel() {
             if(!globalData || globalData.length === 0) { showToast('Database kosong', 'error'); return; }
             try {
@@ -894,6 +997,10 @@
         async function submitForm(event) {
             event.preventDefault();
             const btnSubmit = document.getElementById('btn-submit');
+            
+            // Mencegah double click / submit ganda
+            if (btnSubmit.disabled) return;
+
             const form = document.getElementById('dataForm');
             
             const dataEntry = {
@@ -908,19 +1015,25 @@
 
             if(!dataEntry.etiket) { showToast('Data Etiket wajib diisi!', 'error'); return; }
 
+            // Pengecekan Duplikat Etiket di Client-Side (Berdasarkan cache/data yang sudah diload)
             const isDuplicateEtiket = globalData.some(row => row.etiket === dataEntry.etiket);
             if (isDuplicateEtiket) {
-                showToast('Gagal: Data Etiket tersebut sudah di input sebelumnya!', 'error');
+                // Panggil Animasi Kartu Merah Transparan Alih-alih Toast
+                showDuplicateError(dataEntry.etiket);
                 return; 
             }
 
             const originalBtnText = btnSubmit.innerHTML;
-            btnSubmit.innerHTML = `<i class="fa-solid fa-leaf fa-bounce"></i> Mengirim Data...`;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-lock"></i> Memproses...`;
             btnSubmit.disabled = true;
-            btnSubmit.classList.add('opacity-90', 'cursor-not-allowed', 'scale-95');
+            btnSubmit.classList.add('opacity-80', 'cursor-not-allowed');
+            
+            // TAMPILKAN ANIMASI OVERLAY KARTU TRANSPARAN
+            showSubmitLoading();
 
             if (!GAS_API_URL) {
                 setTimeout(() => {
+                    hideSubmitLoading(); // Sembunyikan Animasi
                     resetFormState(btnSubmit, originalBtnText);
                     const now = new Date();
                     const dd = String(now.getDate()).padStart(2, '0'); const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -936,18 +1049,29 @@
             }
 
             try {
-                const response = await fetch(GAS_API_URL, { method: 'POST', body: JSON.stringify(dataEntry) });
+                const response = await fetch(GAS_API_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify(dataEntry),
+                    // Menambahkan header opsional jika diperlukan oleh Apps Script, biasanya text/plain untuk CORS
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
                 const result = await response.json();
                 
+                hideSubmitLoading(); // Sembunyikan Animasi
                 resetFormState(btnSubmit, originalBtnText);
+                
                 if (result.status === 'success') {
                     showToast('Terkirim ke Server!', 'success');
                     form.reset();
+                    // Load data ulang dari server untuk memastikan sinkronisasi
+                    loadData(true);
                     setTimeout(() => switchTab('dashboard'), 800);
                 } else {
-                    showToast(result.message, 'error');
+                    // Menampilkan pesan error dari server (misal: "Duplikat Etiket" dari sisi server)
+                    showToast(result.message || 'Gagal menyimpan data ke server.', 'error');
                 }
             } catch (error) {
+                hideSubmitLoading(); // Sembunyikan Animasi
                 resetFormState(btnSubmit, originalBtnText);
                 showToast('Koneksi terputus. Gagal menyimpan.', 'error');
             }
