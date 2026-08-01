@@ -250,7 +250,7 @@
                 <div class="px-6 py-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
                     <div>
                         <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
-                            Rekapitulasi Data Live
+                            Rekapitulasi Data Live <span class="text-xs bg-slate-100 text-slate-500 border border-slate-200 px-2 py-1 rounded-md ml-2 shadow-inner">150 Terakhir</span>
                         </h3>
                         <p class="text-sm text-slate-500 mt-1">Data ditarik secara realtime dari server.</p>
                     </div>
@@ -375,7 +375,8 @@
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzF6pJnjnjFTPftENboGBXpSGLUqr8hVowWUV7dLTvbl4YSYyjRM7ZpzfIM8CzXEJqinQ/exec'; 
         // =====================================================================
         
-        let globalData = [];
+        // OPTIMASI 1: Caching - Ambil data dari LocalStorage jika ada (Agar load pertama instan)
+        let globalData = JSON.parse(localStorage.getItem('ckg_cache_data')) || [];
         let uniqueDesaList = [];
         let uniquePetugasList = []; 
         
@@ -398,7 +399,14 @@
         ];
 
         document.addEventListener('DOMContentLoaded', () => { 
-            loadData(true); 
+            // Render cache data secara instan sebelum network merespons
+            if (globalData.length > 0) {
+                renderTable(globalData);
+                updateAllCharts();
+                loadData(true); // Fetch background
+            } else {
+                loadData(false); // Fetch dengan efek loading
+            }
             
             // Auto Refresh setiap 15 detik secara senyap
             setInterval(() => {
@@ -515,7 +523,7 @@
         }
 
         async function loadData(silent = false) {
-            if (!silent) renderLoading();
+            if (!silent && globalData.length === 0) renderLoading();
             if (!GAS_API_URL) { setTimeout(() => { renderTable(globalData); updateAllCharts(); }, 800); return; }
 
             try {
@@ -523,14 +531,21 @@
                 const result = await response.json();
                 
                 if (result.status === 'success') {
-                    globalData = result.data;
-                    renderTable(globalData);
-                    updateAllCharts();
+                    // OPTIMASI 2: Data Diffing - Hanya update UI jika jumlah data berubah atau ada perubahan (Mencegah re-render sia-sia)
+                    const isDataChanged = globalData.length !== result.data.length || 
+                                          (result.data.length > 0 && globalData.length > 0 && result.data[0].etiket !== globalData[0].etiket);
+                    
+                    if (isDataChanged || globalData.length === 0) {
+                        globalData = result.data;
+                        localStorage.setItem('ckg_cache_data', JSON.stringify(globalData)); // Simpan Cache
+                        renderTable(globalData);
+                        updateAllCharts();
+                    }
                 } else {
-                    if (!silent) { showToast('Gagal membaca data', 'error'); renderEmptyTable(); }
+                    if (!silent) { showToast('Gagal membaca data', 'error'); if(globalData.length === 0) renderEmptyTable(); }
                 }
             } catch (error) {
-                if (!silent) { showToast('Koneksi terputus. Pastikan URL API benar.', 'error'); renderEmptyTable(); }
+                if (!silent) { showToast('Koneksi lambat/terputus. Menampilkan data terakhir.', 'error'); if(globalData.length === 0) renderEmptyTable(); }
             }
         }
 
@@ -575,7 +590,11 @@
             if (!dataArray || dataArray.length === 0) { renderEmptyTable(); return; }
 
             tbody.innerHTML = '';
-            dataArray.forEach(row => {
+            
+            // OPTIMASI 4: DOM Slicing - Membatasi baris ke DOM maksimum 150 agar browser tidak freeze
+            const limitTableData = dataArray.slice(0, 150);
+            
+            limitTableData.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.className = `border-b transition-colors bg-white hover:bg-slate-50 border-slate-100 uppercase`;
                 
@@ -667,8 +686,16 @@
         };
 
         function createOrUpdateChart(instance, canvasId, labels, dataPoints, backgroundColors) {
+            // OPTIMASI 3: Chart Update Method - Jangan Hancurkan (destroy) chart jika tidak perlu. Perbarui saja datanya.
+            if (instance) {
+                instance.data.labels = labels;
+                instance.data.datasets[0].data = dataPoints;
+                instance.data.datasets[0].backgroundColor = backgroundColors;
+                instance.update(); // Jauh lebih ringan daripada destroy()
+                return instance;
+            }
+            
             const ctx = document.getElementById(canvasId).getContext('2d');
-            if (instance) instance.destroy();
             return new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -876,7 +903,7 @@
                 nama: '', 
                 nik: '', 
                 etiket: document.getElementById('etiket').value.trim(),
-                keterangan: '' 
+                kangan: '' 
             };
 
             if(!dataEntry.etiket) { showToast('Data Etiket wajib diisi!', 'error'); return; }
